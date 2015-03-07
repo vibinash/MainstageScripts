@@ -1,0 +1,64 @@
+/*-----------------------------------------------------------------------------
+   Cuttoff Glissando triggered by sustain pedal. (Emulate a mod wheel)
+   author: Vibinash
+   
+   Instructions: 
+   Hold down your sustain pedal to increase a the modulation value while 
+   playing some notes. 
+   Release the pedal to decrease the modulation value while playing some notes.
+   
+   If you think, you would like to increase the speed/velocity - use the slider
+   called "Modulation Velocity" on the plugin. Default value = 2
+   
+   Tips: use smaller values to make a slow modulation change or use larger values 
+   otherwise.
+   
+   Note: The modulation will not increase/decrease if you don't play any notes
+  -----------------------------------------------------------------------------
+*/
+
+function HandleMIDI(e) {
+	if (e instanceof ControlChange) {
+	  if (e.number == 64) {
+      if (e.value == 127) {
+        sustainOn = true;
+      	if (counter <= 0){
+      	  counter = 1;
+      	}
+      } else {
+        sustainOn = false;
+       	if (counter >= 127){
+          counter = 126;
+       	}
+      }
+      e.trace();
+    }
+	} else if (e instanceof NoteOn){
+	  if (counter > 0 && counter < 127) {
+			cc = new ControlChange;
+			cc.number =1;
+			cc.value = counter;
+			if (sustainOn){	
+				counter += GetParameter("Modulation Velocity");
+			} else {
+				counter -= GetParameter("Modulation Velocity");
+			}
+			traceAndSend(cc);
+		}
+		e.send();
+	} else {
+		e.send();
+	}
+}
+
+function traceAndSend(event){
+	event.send();
+	event.trace();
+}
+
+//-----------------------------------------------------------------------------
+var counter =0;
+var sustainOn = false;
+var cc = null;
+var PluginParameters = [{name:"Modulation Velocity", type:"lin", minValue:1, 
+                        maxValue:127, numberOfSteps:126, defaultValue:2}];
