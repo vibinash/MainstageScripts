@@ -1,0 +1,63 @@
+/*
+Note Generator - continously generates notes of a given length, pitch, velocity, and separation.
+(c) 2017 Timothy Higinbottom
+MIT License
+
+Usage: Add a Scripter MIDI FX, and copy in this code.
+Change the Script Paramaters as needed. Feel free to extend this code.
+
+Some Ideas:
+- Add sequences of pitches to repeat
+- Add more paramaters like pitch bend
+
+Disclaimer: The update loop may not be in sync with the project tempo.
+Also, changes in paramaters may have some delay before they are applied.
+This is a tool for testing changes to sounds. I do not recommend using this for anything important.
+*/
+// Log Utility
+// no console.log, so this is a hack
+function log(d) {
+    e = new NoteOn({
+        pitch: d
+    });
+    e.trace();
+}
+
+// Paramater setup
+var strings = {
+    notelength: "Length of note (ms)",
+    distance: "Distance between notes (ms)",
+    pitch: "Pitch (MIDI #)",
+    velocity: "Velocity (MIDI velocity #)"
+};
+var PluginParameters = [
+  {name:strings.notelength, defaultValue:1000, minValue:0, maxValue: 3000},
+  {name:strings.distance, defaultValue:50, minValue:0, maxValue: 100},
+  {name:strings.pitch, defaultValue:60, minValue: 36, maxValue: 96, numberOfSteps: 60},
+  {name:strings.velocity, defaultValue:100, minValue: 0, maxValue: 127, numberOfSteps: 127}
+];
+
+//Current note info
+var note = 0; //[NoteOn object]
+var expires = 0; //Date.now() + expiry in ms
+
+//Called frequently + regularly, basically an update loop
+function ProcessMIDI() {
+    if (expires < Date.now()) {
+        //Generate and send note signal
+        note = new NoteOn({
+            pitch: GetParameter(strings.pitch),
+            velocity: GetParameter(strings.velocity)
+        })
+        note.trace();
+        note.send();
+
+        // Generate corresponding off signal
+        var off = new NoteOff(note);
+        off.trace();
+
+        var notelength = GetParameter(strings.notelength);
+        off.sendAfterMilliseconds(notelength); //Queue the send
+        expires = Date.now() + notelength + GetParameter(strings.distance); //Set the expiry for generating the next note
+    }
+}
